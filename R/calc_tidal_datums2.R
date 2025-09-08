@@ -1,10 +1,15 @@
 #' Calculate tidal datums from a user-supplied data frame or saved file of raw water level data
 #'
 #' @param data data frame. A data frame of raw water level data.
-#' @param Location string (optional). The name of the location to be used in the output data frame of tidal datums.
 #' @param record string (optional). The name of the data record to be used in the output data frame of tidal datums. Defaults to "water level".
-#' @inheritParams calc_tidal_datums1
-#' @inheritParams get_timeseries
+#' @param window number. Size of the time window in hours used to calculate MHW and MLW. Defaults to 11.5 hours.
+#' @param print_results TRUE/FALSE. Do you want to print the calculated tidal datums to the console? Defaults to TRUE.
+#' @param return_all TRUE/FALSE. Do you want to retun a list of dataframes including all raw data, intermediate data, and tidal datums? Defaults to FALSE.
+#' 
+#' @import dplyr
+#' @import purrr
+#' @import zoo
+#' @import lubridate
 #' 
 #' @note Adapted from \url{https://github.com/AndrewBirchHydro/albAquariusTools}.
 #' @returns A dataframe with tidal datums or list of data frames with all raw data, intermediate data and tidal data.
@@ -12,7 +17,7 @@
 #'
 #' @examples
 #' calc_tidal_datums2(data = )
-calc_tidal_datums2 <- function(data, Location = NULL, record = "water level", window = 11.5,  print_results = TRUE, return_all = FALSE) {
+calc_tidal_datums2 <- function(data, record = "water level", window = 11.5,  print_results = TRUE, return_all = FALSE) {
   
   # Specify window size
   # window size in hours with 4 readings per hour
@@ -20,6 +25,7 @@ calc_tidal_datums2 <- function(data, Location = NULL, record = "water level", wi
   window_size <- window * 4
   half_window <- floor(window_size / 2)
   
+  Location <- data$TimeSeries$LocationIdentifier
   record_name <- paste0(record, "@", Location)
   
   # Transform raw data into a simplified format
@@ -82,14 +88,20 @@ calc_tidal_datums2 <- function(data, Location = NULL, record = "water level", wi
     "MLW" = lows$MLW[[1]],
     "MHHW" = highs$MHHW[[1]],
     "MLLW" = lows$MLLW[[1]]
-  )
+  ) %>%
+    mutate(MTL = MLW + (MHW-MLW)/2,
+           MSL = mean(df$water_level, na.rm = TRUE),
+           tidal_range = MHW - MLW)
   
   # Do you want to print the results to the console?
   if (print_results) {
-    cat(sprintf("Mean High Water (MHW):         %.3f\n", highs$MHW))
-    cat(sprintf("Mean Higher High Water (MHHW): %.3f\n", highs$MHHW))
-    cat(sprintf("Mean Low Water (MLW):          %.3f\n", lows$MLW))
-    cat(sprintf("Mean Lower Low Water (MLLW):   %.3f\n", lows$MLLW))
+    cat(paste0("Mean High Water (MHW): ", format(round(tidal_datums$MHW, 3), nsmall = 3), " meters NAVD88\n",
+           "Mean Higher High Water (MHHW): ", format(round(tidal_datums$MHHW, 3), nsmall = 3), " meters NAVD88\n",
+           "Mean Low Water (MLW): ", format(round(tidal_datums$MLW, 3), nsmall = 3), " meters NAVD88\n",
+           "Mean Lower Low Water (MLLW): ", format(round(tidal_datums$MLLW, 3), nsmall = 3), " meters NAVD88\n",
+           "Mean Tide Level (MTL): ", format(round(tidal_datums$MTL, 3), nsmall = 3), " meters\n",
+           "Mean Sea Level (MSL): ", format(round(tidal_datums$MSL, 3), nsmall = 3), " meters NAVD88\n",
+           "Tidal Range: ", format(round(tidal_datums$tidal_range, 3), nsmall = 3), " meters"))
   }
   
   # Return all raw data, intermediate data, and tidal datums?
