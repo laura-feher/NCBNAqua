@@ -6,7 +6,6 @@
 \usage{
 calc_tidal_datums2(
   data,
-  Location = NULL,
   record = "water level",
   window = 11.5,
   print_results = TRUE,
@@ -15,8 +14,6 @@ calc_tidal_datums2(
 }
 \arguments{
 \item{data}{data frame. A data frame of raw water level data.}
-
-\item{Location}{string (optional). The name of the location to be used in the output data frame of tidal datums.}
 
 \item{record}{string (optional). The name of the data record to be used in the output data frame of tidal datums. Defaults to "water level".}
 
