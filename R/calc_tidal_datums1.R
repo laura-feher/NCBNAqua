@@ -2,10 +2,16 @@
 #'
 #' @param Location string. The name of the location in the Aquarius database.
 #' @param window number. Size of the time window in hours used to calculate MHW and MLW. Defaults to 11.5 hours.
-#' @inheritParams get_timeseries
+#' @param start_date string (optional). Filter time series to data after a specific date.
+#' @param end_date string (optional). Filter time series to data before a specific date.
 #' @param print_results TRUE/FALSE. Do you want to print the calculated tidal datums to the console? Defaults to TRUE.
 #' @param return_all TRUE/FALSE. Do you want to retun a list of dataframes including all raw data, intermediate data, and tidal datums? Defaults to FALSE.
 #'
+#' @import dplyr
+#' @import purrr
+#' @import zoo
+#' @import lubridate
+#' 
 #' @note Adapted from \url{https://github.com/AndrewBirchHydro/albAquariusTools}.
 #' @returns A dataframe with tidal datums or list of data frames with all raw data, intermediate data and tidal data.
 #' @export

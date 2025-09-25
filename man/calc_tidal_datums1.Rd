@@ -18,11 +18,9 @@ calc_tidal_datums1(
 
 \item{window}{number. Size of the time window in hours used to calculate MHW and MLW. Defaults to 11.5 hours.}
 
-\item{start_date}{string (optional). Filter time series to data after a
-specific date.}
+\item{start_date}{string (optional). Filter time series to data after a specific date.}
 
-\item{end_date}{string (optional). Filter time series to data before a
-specific date.}
+\item{end_date}{string (optional). Filter time series to data before a specific date.}
 
 \item{print_results}{TRUE/FALSE. Do you want to print the calculated tidal datums to the console? Defaults to TRUE.}
 

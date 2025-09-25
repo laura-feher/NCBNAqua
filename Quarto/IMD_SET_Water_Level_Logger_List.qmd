@@ -1,0 +1,66 @@
+---
+title: "IMD SET Water Level Logger List"
+date: "`r Sys.Date()`"
+format: 
+  html:
+    df-print: paged
+editor: visual
+embed-resources: true
+---
+
+## Source functions from imd-fetchaquarius and establish connection to API
+
+```{r Connect-to-Aquarius}
+#| message: false
+#| warning: false
+library(tidyverse)
+
+# Source functions from imd-fetchaquarius
+source("https://raw.githubusercontent.com/nationalparkservice/imd-fetchaquarius/refs/heads/main/R/timeseries_client.R")
+source("https://raw.githubusercontent.com/nationalparkservice/imd-fetchaquarius/refs/heads/main/R/retrieve_data.R")
+
+# set username and then enter password
+# keyring::key_set("aquarius", "aqreadonly")
+
+# establish connection
+connectToAquarius("aqreadonly")
+```
+
+## Get a list of folders
+
+```{r Folders}
+folders <- data.frame(network = c("Northeast Coastal and Barrier Network", "National Capital Region Network", "South Florida Caribbean Network")) %>%
+  mutate(folders = map(network, ~getFolders(.x))) %>%
+  unnest(cols = c(folders))
+
+rmarkdown::paged_table(folders)
+```
+
+```{r Location-Info}
+locations <- data.frame(network = c("NCBN", "NCRN", "NCRN", "SFCN", "SFCN", "SFCN"), folder = c("National Park Service.Northeast Coastal and Barrier Network.SET_Water_Level_Data", "National Park Service.National Capital Region Network", "National Park Service.National Capital Region Network.Dyke Marsh", "National Park Service.South Florida Caribbean Network.BISC", "National Park Service.South Florida Caribbean Network.SARI", "National Park Service.South Florida Caribbean Network.VIIS")) %>%
+  mutate(LocationInfo = map(folder, ~getLocationInfo(folder = .x))) %>%
+  unnest(cols = c(LocationInfo)) %>%
+  filter(str_detect(Identifier, "SET") | str_detect(Identifier, "WaterLevel") | str_detect(Identifier, "GWMP_DykeMarsh_CreekBank2") | str_detect(Identifier, "GWMP_DykeMarsh_WL"))
+
+rmarkdown::paged_table(locations)
+```
+
+```{r Parameters}
+#| message: false
+#| warning: false
+parameters <- locations %>%
+  mutate(parameters = map(Identifier, ~getTimeSeriesInfo(.x))) %>%
+  select(-c(Identifier, UniqueId, UtcOffset, LastModified, Publish, Tags)) %>%
+  unnest(cols = c(parameters))
+
+rmarkdown::paged_table(parameters)
+```
+
+```{r Get-WL-Data-Example}
+# Example of how to get all water level data for a specific park
+
+# parameters %>%
+#   filter(str_detect(Identifier, "ASIS")) %>%
+#   filter(Parameter %in% c("Depth", "DepthFromWaterPressure", "Water Level")) %>%
+#   mutate(wl_timeseries = map(Identifier, ~getTimeSeries(.x)))
+```
