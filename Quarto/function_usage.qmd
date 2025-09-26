@@ -1,0 +1,122 @@
+---
+title: "Function Usage"
+date: "`r Sys.Date()`"
+format: 
+  html:
+    df-print: paged
+editor: visual
+embed-resources: true
+---
+
+## Source functions from imd-fetchaquarius and establish connection to API
+
+```{r Connect-to-Aquarius}
+#| message: false
+#| warning: false
+library(tidyverse)
+
+# Source functions from imd-fetchaquarius
+source("https://raw.githubusercontent.com/nationalparkservice/imd-fetchaquarius/refs/heads/main/R/timeseries_client.R")
+source("https://raw.githubusercontent.com/nationalparkservice/imd-fetchaquarius/refs/heads/main/R/retrieve_data.R")
+
+# set username and then enter password
+# keyring::key_set("aquarius", "aqreadonly")
+
+# establish connection
+connectToAquarius("aqreadonly")
+```
+
+```{r get-wl-data}
+#| message: false
+#| warning: false
+# Get water level data for each site
+asis_wl <- getLocationInfo(folder = "National Park Service.Northeast Coastal and Barrier Network.SET_Water_Level_Data") %>%
+  filter(str_detect(Identifier, "ASIS")) %>%
+  mutate(parameters = map(Identifier, ~getTimeSeriesInfo(.x))) %>%
+  select(-c(Identifier, UniqueId, UtcOffset, LastModified, Publish, Tags)) %>%
+  unnest(cols = c(parameters)) %>%
+  filter(Unit == "m") %>%
+  mutate(wl_timeseries = map(Identifier, ~getTimeSeries(.x))) %>%
+  select(Name, Identifier, LocationIdentifier, wl_timeseries) %>%
+  mutate(wl_data = map(wl_timeseries, ~.x$Points)) %>%
+  select(-wl_timeseries) %>%
+  unnest(cols = wl_data) %>%
+  unnest(cols = Value) %>%
+  rename("water_level" = Numeric, "datetime" = Timestamp) %>%
+  as.data.frame %>%
+  separate(., col = datetime, into = c("date", "time"), sep = " ", remove = FALSE) %>%
+  mutate(time = if_else(is.na(time), "00:00:00", time)) %>%
+  filter(!is.na(water_level))
+
+# asis_wl <- get_wl_data(park = "ASIS")
+
+head(asis_wl)
+```
+
+```{r}
+#| message: false
+#| warning: false
+# Define helper function to find local highs or lows
+find_extremes <- function(x, fun, window = 11.5) {
+  window_size <- window*4
+  half_window <- floor(window_size / 2)
+  roll_extreme <- zoo::rollapply(x, width = window_size, FUN = fun, fill = NA, align = "center")
+  is_extreme <- x == roll_extreme
+  # Remove flat peaks/troughs by ensuring unique max/min in the window
+  is_extreme <- purrr::map_lgl(seq_along(x), function(i) {
+    if (is.na(is_extreme[i]) || !is_extreme[i]) return(FALSE)
+    window_start <- max(1, i - half_window)
+    window_end <- min(length(x), i + half_window)
+    window_vals <- x[window_start:window_end]
+    center_index <- i - window_start + 1
+    # Check if the extreme value is unique in the window
+    sum(window_vals == x[i]) == 1
+  })
+  ifelse(is_extreme, x, NA_real_)
+}
+
+# Find high and low extremes
+df_extremes <- asis_wl %>%
+  group_by(Identifier, Name, LocationIdentifier) %>%
+  nest(data = -c(Identifier, Name, LocationIdentifier)) %>%
+  mutate(highs = map(data, ~find_extremes(.$water_level, max)),
+         lows = map(data, ~find_extremes(.$water_level, min))) %>%
+  unnest(cols = c(data, highs, lows)) %>%
+  mutate(date_chr = lubridate::as_date(date))
+
+# Calculate MHW and MHHW from the extremes
+highs <- df_extremes %>%
+  filter(!is.na(highs)) %>%
+  group_by(Identifier, Name, LocationIdentifier) %>%
+  nest() %>%
+  mutate(MHW = map_dbl(data, ~mean(.x$highs, na.rm = TRUE)),
+         MHHW = map_dbl(data, ~.x %>%
+                      group_by(date_chr) %>%
+                      summarise(max_high = max(highs, na.rm = TRUE), 
+                                .groups = "drop") %>%
+                      summarise(mean_high = mean(max_high, na.rm = TRUE)) %>%
+                      pull(mean_high)
+                    )) %>%
+  select(-data)
+
+# Calculate MLW and MLLW from the extremes
+lows <- df_extremes %>%
+  filter(!is.na(lows)) %>%
+  group_by(Identifier, Name, LocationIdentifier) %>%
+  nest() %>%
+  mutate(MLW = map_dbl(data, ~mean(.x$lows, na.rm = TRUE)),
+         MLLW = map_dbl(data, ~.x %>%
+                      group_by(date_chr) %>%
+                      summarise(min_low = min(lows, na.rm = TRUE),
+                                .groups = "drop") %>%
+                      summarise(mean_low = mean(min_low, na.rm = TRUE)) %>%
+                      pull(mean_low)
+                    )) %>%
+  select(-data)
+
+tidal_datums <- full_join(highs, lows, by = join_by(Name, Identifier, LocationIdentifier))
+
+# tidal_datums <- calc_tidal_datums(wl_data = asis_wl)
+
+head(tidal_datums)
+```
