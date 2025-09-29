@@ -29,15 +29,19 @@ connectToAquarius("aqreadonly")
 ```{r get-wl-data}
 #| message: false
 #| warning: false
+# set the site order 
+site_order <- c("Marsh 5 (Pope Bay)", "Marsh 6 (Pine Tree)", "Marsh 8 (Valentines)", "Marsh 11", "Exclosures", "Pine Tree Study")
+
 # Get water level data for each site
 asis_wl <- getLocationInfo(folder = "National Park Service.Northeast Coastal and Barrier Network.SET_Water_Level_Data") %>%
   filter(str_detect(Identifier, "ASIS")) %>%
   mutate(parameters = map(Identifier, ~getTimeSeriesInfo(.x))) %>%
   select(-c(Identifier, UniqueId, UtcOffset, LastModified, Publish, Tags)) %>%
   unnest(cols = c(parameters)) %>%
+  mutate(park = "ASIS") %>%
   filter(Unit == "m") %>%
   mutate(wl_timeseries = map(Identifier, ~getTimeSeries(.x))) %>%
-  select(Name, Identifier, LocationIdentifier, wl_timeseries) %>%
+  select(Name, Identifier, LocationIdentifier, park, wl_timeseries) %>%
   mutate(wl_data = map(wl_timeseries, ~.x$Points)) %>%
   select(-wl_timeseries) %>%
   unnest(cols = wl_data) %>%
@@ -45,15 +49,34 @@ asis_wl <- getLocationInfo(folder = "National Park Service.Northeast Coastal and
   rename("water_level" = Numeric, "datetime" = Timestamp) %>%
   as.data.frame %>%
   separate(., col = datetime, into = c("date", "time"), sep = " ", remove = FALSE) %>%
-  mutate(time = if_else(is.na(time), "00:00:00", time)) %>%
-  filter(!is.na(water_level))
-
-# asis_wl <- get_wl_data(park = "ASIS")
+  mutate(time = if_else(is.na(time), "00:00:00", time),
+         units = if_else(park %in% c("ASIS", "ACAD", "COLO", "CACO", "FIIS", "GATE"), "meters NAVD88", "meters")) %>%
+  filter(!is.na(water_level)) %>%
+  mutate(site_name = case_when(LocationIdentifier == "ASIS_M5_WaterLevel" ~ "Marsh 5 (Pope Bay)",
+                               LocationIdentifier == "ASIS_M6_WaterLevel" ~ "Marsh 6 (Pine Tree)",
+                               LocationIdentifier == "ASIS_M8_WaterLevel" ~ "Marsh 8 (Valentines)",
+                               T ~ "unknown"),
+         site_name = if_else(site_name != "unknown", forcats::fct_relevel(site_name, site_order), forcats::as_factor(site_name))) %>%
+  group_by(Name, Identifier, LocationIdentifier, park, site_name)
 
 head(asis_wl)
 ```
 
-```{r}
+```{r get-wl-data-package-funtion}
+asis_wl_package <- get_wl_data(park = "ASIS") %>%
+  mutate(
+    site_name = case_when(
+      LocationIdentifier == "ASIS_M5_WaterLevel" ~ "Marsh 5 (Pope Bay)",
+      LocationIdentifier == "ASIS_M6_WaterLevel" ~ "Marsh 6 (Pine Tree)",
+      LocationIdentifier == "ASIS_M8_WaterLevel" ~ "Marsh 8 (Valentines)",
+      T ~ "unknown"),
+    site_name = if_else(site_name != "unknown", forcats::fct_relevel(site_name, site_order), forcats::as_factor(site_name))) %>%
+  group_by(Name, Identifier, LocationIdentifier, park, site_name)
+
+head(asis_wl_package)
+```
+
+```{r calc-tidal-datums}
 #| message: false
 #| warning: false
 # Define helper function to find local highs or lows
@@ -77,17 +100,18 @@ find_extremes <- function(x, fun, window = 11.5) {
 
 # Find high and low extremes
 df_extremes <- asis_wl %>%
-  group_by(Identifier, Name, LocationIdentifier) %>%
-  nest(data = -c(Identifier, Name, LocationIdentifier)) %>%
-  mutate(highs = map(data, ~find_extremes(.$water_level, max)),
-         lows = map(data, ~find_extremes(.$water_level, min))) %>%
+  group_by(Identifier, Name, LocationIdentifier, .add = TRUE) %>%
+  #nest(data = -c(Identifier, Name, LocationIdentifier)) %>%
+  nest() %>%
+  mutate(highs = map(data, ~find_extremes(.x$water_level, max)),
+         lows = map(data, ~find_extremes(.x$water_level, min))) %>%
   unnest(cols = c(data, highs, lows)) %>%
   mutate(date_chr = lubridate::as_date(date))
 
 # Calculate MHW and MHHW from the extremes
 highs <- df_extremes %>%
   filter(!is.na(highs)) %>%
-  group_by(Identifier, Name, LocationIdentifier) %>%
+  group_by(Identifier, Name, LocationIdentifier, .add = TRUE) %>%
   nest() %>%
   mutate(MHW = map_dbl(data, ~mean(.x$highs, na.rm = TRUE)),
          MHHW = map_dbl(data, ~.x %>%
@@ -102,7 +126,7 @@ highs <- df_extremes %>%
 # Calculate MLW and MLLW from the extremes
 lows <- df_extremes %>%
   filter(!is.na(lows)) %>%
-  group_by(Identifier, Name, LocationIdentifier) %>%
+  group_by(Identifier, Name, LocationIdentifier, .add = TRUE) %>%
   nest() %>%
   mutate(MLW = map_dbl(data, ~mean(.x$lows, na.rm = TRUE)),
          MLLW = map_dbl(data, ~.x %>%
@@ -114,9 +138,19 @@ lows <- df_extremes %>%
                     )) %>%
   select(-data)
 
-tidal_datums <- full_join(highs, lows, by = join_by(Name, Identifier, LocationIdentifier))
+tidal_datums <- full_join(highs, lows)
 
-# tidal_datums <- calc_tidal_datums(wl_data = asis_wl)
+rm(df_extremes, highs, lows, find_extremes)
 
 head(tidal_datums)
+```
+
+```{r}
+tidal_datums_package <- calc_tidal_datums(asis_wl_package)
+
+head(tidal_datums_package)
+```
+
+```{r}
+
 ```
