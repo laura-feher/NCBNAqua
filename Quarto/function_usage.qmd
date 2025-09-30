@@ -29,41 +29,21 @@ connectToAquarius("aqreadonly")
 ```{r get-wl-data}
 #| message: false
 #| warning: false
+
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/calc_longest_flood.R")
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/calc_flood_events.R")
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/calc_time_flooded.R")
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/calc_daily_mean_flood.R")
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/calc_flood_depths.R")
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/get_wl_data.R")
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/calc_tidal_datums.R")
+source("C:/Users/lfeher/OneDrive - DOI/NCBNAqua/R/find_extremes.R")
+
 # set the site order 
 site_order <- c("Marsh 5 (Pope Bay)", "Marsh 6 (Pine Tree)", "Marsh 8 (Valentines)", "Marsh 11", "Exclosures", "Pine Tree Study")
 
 # Get water level data for each site
-asis_wl <- getLocationInfo(folder = "National Park Service.Northeast Coastal and Barrier Network.SET_Water_Level_Data") %>%
-  filter(str_detect(Identifier, "ASIS")) %>%
-  mutate(parameters = map(Identifier, ~getTimeSeriesInfo(.x))) %>%
-  select(-c(Identifier, UniqueId, UtcOffset, LastModified, Publish, Tags)) %>%
-  unnest(cols = c(parameters)) %>%
-  mutate(park = "ASIS") %>%
-  filter(Unit == "m") %>%
-  mutate(wl_timeseries = map(Identifier, ~getTimeSeries(.x))) %>%
-  select(Name, Identifier, LocationIdentifier, park, wl_timeseries) %>%
-  mutate(wl_data = map(wl_timeseries, ~.x$Points)) %>%
-  select(-wl_timeseries) %>%
-  unnest(cols = wl_data) %>%
-  unnest(cols = Value) %>%
-  rename("water_level" = Numeric, "datetime" = Timestamp) %>%
-  as.data.frame %>%
-  separate(., col = datetime, into = c("date", "time"), sep = " ", remove = FALSE) %>%
-  mutate(time = if_else(is.na(time), "00:00:00", time),
-         units = if_else(park %in% c("ASIS", "ACAD", "COLO", "CACO", "FIIS", "GATE"), "meters NAVD88", "meters")) %>%
-  filter(!is.na(water_level)) %>%
-  mutate(site_name = case_when(LocationIdentifier == "ASIS_M5_WaterLevel" ~ "Marsh 5 (Pope Bay)",
-                               LocationIdentifier == "ASIS_M6_WaterLevel" ~ "Marsh 6 (Pine Tree)",
-                               LocationIdentifier == "ASIS_M8_WaterLevel" ~ "Marsh 8 (Valentines)",
-                               T ~ "unknown"),
-         site_name = if_else(site_name != "unknown", forcats::fct_relevel(site_name, site_order), forcats::as_factor(site_name))) %>%
-  group_by(Name, Identifier, LocationIdentifier, park, site_name)
-
-head(asis_wl)
-```
-
-```{r get-wl-data-package-funtion}
-asis_wl_package <- get_wl_data(park = "ASIS") %>%
+asis_wl <- get_wl_data(park = "ASIS") %>%
   mutate(
     site_name = case_when(
       LocationIdentifier == "ASIS_M5_WaterLevel" ~ "Marsh 5 (Pope Bay)",
@@ -73,84 +53,84 @@ asis_wl_package <- get_wl_data(park = "ASIS") %>%
     site_name = if_else(site_name != "unknown", forcats::fct_relevel(site_name, site_order), forcats::as_factor(site_name))) %>%
   group_by(Name, Identifier, LocationIdentifier, park, site_name)
 
-head(asis_wl_package)
+head(asis_wl)
 ```
 
 ```{r calc-tidal-datums}
 #| message: false
 #| warning: false
-# Define helper function to find local highs or lows
-find_extremes <- function(x, fun, window = 11.5) {
-  window_size <- window*4
-  half_window <- floor(window_size / 2)
-  roll_extreme <- zoo::rollapply(x, width = window_size, FUN = fun, fill = NA, align = "center")
-  is_extreme <- x == roll_extreme
-  # Remove flat peaks/troughs by ensuring unique max/min in the window
-  is_extreme <- purrr::map_lgl(seq_along(x), function(i) {
-    if (is.na(is_extreme[i]) || !is_extreme[i]) return(FALSE)
-    window_start <- max(1, i - half_window)
-    window_end <- min(length(x), i + half_window)
-    window_vals <- x[window_start:window_end]
-    center_index <- i - window_start + 1
-    # Check if the extreme value is unique in the window
-    sum(window_vals == x[i]) == 1
-  })
-  ifelse(is_extreme, x, NA_real_)
-}
+asis_tidal_datums <- calc_tidal_datums(asis_wl)
 
-# Find high and low extremes
-df_extremes <- asis_wl %>%
-  group_by(Identifier, Name, LocationIdentifier, .add = TRUE) %>%
-  #nest(data = -c(Identifier, Name, LocationIdentifier)) %>%
-  nest() %>%
-  mutate(highs = map(data, ~find_extremes(.x$water_level, max)),
-         lows = map(data, ~find_extremes(.x$water_level, min))) %>%
-  unnest(cols = c(data, highs, lows)) %>%
-  mutate(date_chr = lubridate::as_date(date))
-
-# Calculate MHW and MHHW from the extremes
-highs <- df_extremes %>%
-  filter(!is.na(highs)) %>%
-  group_by(Identifier, Name, LocationIdentifier, .add = TRUE) %>%
-  nest() %>%
-  mutate(MHW = map_dbl(data, ~mean(.x$highs, na.rm = TRUE)),
-         MHHW = map_dbl(data, ~.x %>%
-                      group_by(date_chr) %>%
-                      summarise(max_high = max(highs, na.rm = TRUE), 
-                                .groups = "drop") %>%
-                      summarise(mean_high = mean(max_high, na.rm = TRUE)) %>%
-                      pull(mean_high)
-                    )) %>%
-  select(-data)
-
-# Calculate MLW and MLLW from the extremes
-lows <- df_extremes %>%
-  filter(!is.na(lows)) %>%
-  group_by(Identifier, Name, LocationIdentifier, .add = TRUE) %>%
-  nest() %>%
-  mutate(MLW = map_dbl(data, ~mean(.x$lows, na.rm = TRUE)),
-         MLLW = map_dbl(data, ~.x %>%
-                      group_by(date_chr) %>%
-                      summarise(min_low = min(lows, na.rm = TRUE),
-                                .groups = "drop") %>%
-                      summarise(mean_low = mean(min_low, na.rm = TRUE)) %>%
-                      pull(mean_low)
-                    )) %>%
-  select(-data)
-
-tidal_datums <- full_join(highs, lows)
-
-rm(df_extremes, highs, lows, find_extremes)
-
-head(tidal_datums)
+head(asis_tidal_datums)
 ```
 
-```{r}
-tidal_datums_package <- calc_tidal_datums(asis_wl_package)
+```{r calc-flood-depths}
+#| message: false
+#| warning: false
+# Average minimum daily flood depth, an indicator of marsh drainage, was calculated as the average difference between the daily minimum water elevation and the marsh elevation at each site. See Stagg et al. 2020  
 
-head(tidal_datums_package)
+asis_elev_df <- data.frame(LocationIdentifier = c("ASIS_M5_WaterLevel", "ASIS_M6_WaterLevel", "ASIS_M8_WaterLevel"), elev_navd88 = c(0.145, 0.1325, 0.200))
+
+asis_flood_depths <- calc_flood_depths(wl_data = asis_wl, elev_df = asis_elev_df)
+
+head(asis_flood_depths)
 ```
 
-```{r}
+```{r calc-daily-mean-min-flood-depth-height}
+#| message: false
+#| warning: false
+asis_daily_mean_min_flood <- calc_daily_mean_flood(flood_depths_df = asis_flood_depths, summary_metric = "min")
 
+head(asis_daily_mean_min_flood)
+```
+
+```{r calc-daily-mean-mean-flood-depth-height}
+#| message: false
+#| warning: false
+asis_daily_mean_mean_flood <- calc_daily_mean_flood(asis_flood_depths, summary_metric = "mean")
+
+head(asis_daily_mean_mean_flood)
+```
+
+```{r calc-percent-time-flooded}
+#| message: false
+#| warning: false
+asis_time_flooded <- calc_time_flooded(asis_flood_depths)
+
+head(asis_time_flooded)
+```
+
+```{r calc-num-flood-events}
+#| message: false
+#| warning: false
+asis_flood_events <- calc_flood_events(flood_depths_df = asis_flood_depths)
+
+head(asis_flood_events)
+```
+
+```{r calc-longest-flood-event}
+#| message: false
+#| warning: false
+asis_longest_flood <- calc_longest_flood(asis_flood_depths)
+
+head(asis_longest_flood)
+```
+
+```{r park-level-averages}
+#| message: false
+#| warning: false
+asis_mean_hydro <- asis_wl %>%
+  summarise(first_date = first(datetime),
+            last_date = last(datetime),
+            .groups = "keep") %>% 
+  left_join(., asis_daily_mean_min_flood) %>%
+  left_join(., asis_daily_mean_mean_flood) %>%
+  left_join(., asis_time_flooded)  %>%
+  left_join(., asis_flood_events) %>%
+  left_join(., asis_longest_flood) %>%
+  left_join(., asis_tidal_datums) %>%
+  ungroup(-park) %>%
+  summarise(across(c(elev_navd88, daily_mean_min_flood_depth, daily_mean_min_flood_elev, daily_mean_flood_depth, daily_mean_flood_elev, total_time_recorded, flooding_time, percent_time_flooded, total_flood_events, max_consecutive_flood_days, MHW, MHHW, MLW, MLLW), ~mean(.x, na.rm = TRUE), .names = "park_{.col}"))
+
+head(asis_mean_hydro)
 ```

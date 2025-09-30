@@ -26,11 +26,11 @@ get_wl_data <- function(park_code) {
     mutate(parameters = map(Identifier, ~getTimeSeriesInfo(.x))) %>%
     select(-c(Identifier, UniqueId, UtcOffset, LastModified, Publish, Tags)) %>%
     unnest(cols = c(parameters)) %>%
-    filter(Unit == "m") %>% # filter to the water level depth time series
+    filter(str_detect(Parameter, "Depth") | str_detect(Parameter, "Water Level")) %>% # filter to the water level time series
     filter(str_detect(Identifier, park_code)) %>%
     mutate(wl_timeseries = map(Identifier, ~getTimeSeries(.x))) %>%
     mutate(park = park_code) %>%
-    select(Name, Identifier, LocationIdentifier, park, wl_timeseries) %>%
+    select(Name, Identifier, LocationIdentifier, park, Unit, Label, wl_timeseries) %>%
     mutate(wl_data = map(wl_timeseries, ~.x$Points)) %>%
     select(-wl_timeseries) %>%
     unnest(cols = wl_data) %>%
@@ -39,6 +39,10 @@ get_wl_data <- function(park_code) {
     as.data.frame %>%
     separate(., col = datetime, into = c("date", "time"), sep = " ", remove = FALSE) %>%
     mutate(time = if_else(is.na(time), "00:00:00", time),
-           units = if_else(park %in% c("ASIS", "ACAD", "COLO", "CACO", "FIIS", "GATE", "GWMP", "NACE"), "meters NAVD88", "meters")) %>%
-    filter(!is.na(water_level))
+           is_navd88 = if_else(str_detect(Label, "NAVD88") | str_detect(Label, "NAVD 88"), TRUE, FALSE)) %>% # note that output units will be the same as whatever is in Aquarius
+    filter(!is.na(water_level)) %>%
+    { if(park_code == "VIIS")
+      filter(., str_sub(time, -2) == "00") # for VIIS, remove duplicate measurements that occurred at 37 seconds on the hour
+      else .
+      }
 }
