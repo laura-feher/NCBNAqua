@@ -28,9 +28,6 @@ A dataframe with the recent local slr rate or list of data frames with all raw d
 \description{
 Calculate the recent local rate of SLR from a user-supplied data frame or saved file of raw water level data
 }
-\note{
-Adapted from \url{https://github.com/AndrewBirchHydro/albAquariusTools}.
-}
 \examples{
 calc_recent_local_slr2(data = )
 }
