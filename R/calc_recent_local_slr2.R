@@ -10,7 +10,6 @@
 #' @import purrr
 #' @import lubridate
 #' 
-#' @note Adapted from \url{https://github.com/AndrewBirchHydro/albAquariusTools}.
 #' @returns A dataframe with the recent local slr rate or list of data frames with all raw data, intermediate data and recent local slr rate.
 #' @export
 #'
