@@ -69,12 +69,12 @@ get_wl_data <- function(park_code) {
       bind_rows() %>%
       filter(Identifier %in% c("ACAD_BH_WaterLevel", "ACAD_MCHT_WaterLevel", "ACAD_SCH_WaterLevel", "ACAD_TI_WaterLevel")) %>%
       distinct()
-  } else if (park == "CACO") {
+  } else if (park_code == "CACO") {
     location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
       bind_rows() %>%
       filter(Identifier %in% c("CACO_BlackfishCreek_WaterLevel", "CACO_HH_Restricted_WaterLevel", "CACO_HH_Unrestricted_WaterLevel", "CACO_NausetNorth_WaterLevel", "CACO_NausetSouth_WaterLevel")) %>%
       distinct()
-  } else if (park == "GATE") {
+  } else if (park_code == "GATE") {
     location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
       bind_rows() %>%
       filter(Identifier %in% c("GATE_BB_Waterlevel", "GATE_BE_Waterlevel", "GATE_Joco_Waterlevel", "GATE_SAHU_WaterLevel")) %>%
