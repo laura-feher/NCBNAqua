@@ -41,8 +41,11 @@
 #' 
 get_wl_data <- function(park_code) {
   
-  if(park_code %in% c("ASIS", "ACAD", "COLO", "CACO", "FIIS", "GATE")) {
+  if(park_code %in% c("ASIS", "FIIS")) {
     folder <- "National Park Service.Northeast Coastal and Barrier Network.SET_Water_Level_Data"
+  } else if (park_code %in% c("ACAD", "COLO", "CACO", "GATE")) {
+    folder <- c("National Park Service.Northeast Coastal and Barrier Network.SET_Water_Level_Data",
+                "National Park Service.Northeast Coastal and Barrier Network")
   } else if(park_code %in% c("GWMP", "NACE")) {
     folder <- "National Park Service.National Capital Region Network"
   } else if (park_code == "BISC") {
@@ -56,6 +59,26 @@ get_wl_data <- function(park_code) {
   if (park_code == "GWMP") {
    location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
       filter(Identifier == "GWMP_DykeMarsh_WL")
+  } else if (park_code == "COLO") {
+    location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
+      bind_rows() %>%
+      filter(Identifier %in% c("COLO_M19_WaterLevel", "COLO_M30_WaterLevel")) %>%
+      distinct()
+  } else if (park_code == "ACAD") {
+    location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
+      bind_rows() %>%
+      filter(Identifier %in% c("ACAD_BH_WaterLevel", "ACAD_MCHT_WaterLevel", "ACAD_SCH_WaterLevel", "ACAD_TI_WaterLevel")) %>%
+      distinct()
+  } else if (park == "CACO") {
+    location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
+      bind_rows() %>%
+      filter(Identifier %in% c("CACO_BlackfishCreek_WaterLevel", "CACO_HH_Restricted_WaterLevel", "CACO_HH_Unrestricted_WaterLevel", "CACO_NausetNorth_WaterLevel", "CACO_NausetSouth_WaterLevel")) %>%
+      distinct()
+  } else if (park == "GATE") {
+    location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
+      bind_rows() %>%
+      filter(Identifier %in% c("GATE_BB_Waterlevel", "GATE_BE_Waterlevel", "GATE_Joco_Waterlevel", "GATE_SAHU_WaterLevel")) %>%
+      distinct()
   } else if (park_code == "NACE") {
     location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
       filter(Identifier == "NACE_KENI_WaterLevel") 
