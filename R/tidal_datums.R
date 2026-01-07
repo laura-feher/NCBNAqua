@@ -78,7 +78,7 @@ tidal_datums <- function(wl_data) {
                             pull(mean_low)
            )) %>%
     select(-data)
-  
+    
   # get period of record
   wl_dates <- wl_data %>%
     filter(!is.na(water_level)) %>%
