@@ -2,18 +2,24 @@
 % Please edit documentation in R/get_wl_data.R
 \name{get_wl_data}
 \alias{get_wl_data}
-\title{Load water level data from NPS Aquarius for a specific park}
+\title{Load water logger data from NPS Aquarius for a specific park and NCBN
+protocol}
 \usage{
-get_wl_data(park_code)
+get_wl_data(park_code, protocol = "SET")
 }
 \arguments{
 \item{park_code}{string (required); The 4 character park code - must be
-capitalized (e.g., "ASIS", "GATE"). Options include ASIS, ACAD, BISC, CACO,
-COLO, FIIS, GATE, GWMP, NACE, SARI, or VIIS.}
+capitalized (e.g., "ASIS"). For SET sites, options include ASIS, ACAD,
+BISC, CACO, COLO, FIIS, GATE, GWMP, NACE, SARI, or VIIS. For ENE Seagrass,
+options include ASIS, CACO, or FIIS. For ENE WQ, options include ASIS,
+CACO, COLO, FIIS, GATE, or GWMP.}
+
+\item{protocol}{string (required); The protocol type that you want to return
+data for. Either "SET", "ENE_Seagrass", or "ENE_WQ". Default is "SET".}
 }
 \value{
-A data frame of water level (i.e., water level) data from the
-selected park. Data frame columns are defined as:
+For SET sites, a data frame of water level data from the selected
+park. Data frame columns are defined as:
 \itemize{
 \item Name: The site name e.g., Assateague Island NS - M5 -Pope Bay Marsh.
 \item Identifier: The site name and time series name e.g., Depth.meters NAVD88 ASIS_M5_Waterlevel.
@@ -27,6 +33,8 @@ selected park. Data frame columns are defined as:
 \item water_level: The water level depth in meters; this is either referenced to NAVD88 or, if not referenced to NAVD88, represents a water level depth relative to the vertical position of the water logger.
 \item is_navd88: True/False - is the water level depth referenced to NAVD88?
 \item site_name: The SET site name e.g., Marsh 5 (Pope Bay).
+For Seagrass or ENE sites, returns a data frame of time series for all
+available parameters.
 }
 }
 \description{
@@ -35,16 +43,16 @@ Utilizes functions from the package
 to connect to the NPS Aquarius database.
 }
 \note{
-This function gets water level data for sites that have either "Depth"
-or "Water Level" as one of the parameters. Output units will be the same as
-whatever was entered into Aquarius when the data was uploaded (either raw
-meters or meters referenced to NAVD88).
+For SET sites, this function gets water level data for sites that have
+either "Depth" or "Water Level" as one of the parameters. Output units will
+be the same as whatever was entered into Aquarius when the data was
+uploaded (either raw meters or meters referenced to NAVD88).
 }
 \examples{
 library(tidyverse)
 library(remotes)
 library(fetchaquarius)
 
-asis_wl <- get_wl_data(park = "ASIS")
+asis_wl <- get_wl_data(park = "ASIS", protocol = "SET")
 
 }
