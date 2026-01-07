@@ -15,10 +15,7 @@ knitr::opts_chunk$set(
 
 # NCBNAqua
 
-<!-- badges: start -->
-<!-- badges: end -->
-
-The goal of NCBNAqua is to ...
+NCBNAqua provides functions for downloading and working with water data for the NCBN protocols from the NPS Aquarius database.This package utilizes the National Park Service [fetchaquarius](https://github.com/nationalparkservice/imd-fetchaquarius) package for the API connection to the database.
 
 ## Installation
 
@@ -28,49 +25,57 @@ You can install the development version of NCBNAqua from [GitHub](https://github
 # install.packages("pak")
 pak::pak("laura-feher/NCBNAqua")
 ```
+
+## Set & Store API credentials
+
+The first time you use the package, you'll need to set and store credentials for the Aquarius API using the [keyring](https://keyring.r-lib.org/) package. Running the function keyring::key_set() will open a dialog box that will prompt you for a password. Note that this only needs to be done once. Contact laura_feher at nps.gov for more info.
+
 ```{r}
-library(httr)
-library(jsonlite)
-## global variables for api connection 
-# only run once per session
-# https://katemmiller.github.io/IMD_R_Training_Advanced/
-# timeseries = timeseriesClient()
-# timeseries$connect("https://aquarius.nps.gov/aquarius", "aqreadonly", "aqreadonly")
-# publishapiurl = 'https://aquarius.nps.gov/aquarius/Publish/v2'
+library(keyring)
+
+# keyring::key_set("aquarius", "aqreadonly")
+```
+
+## Establish a Connection to Aquarius
+
+```{r}
+# establish connection to Aquarius
+fetchaquarius::connectToAquarius("aqreadonly")
+```
+
+## Download water data for a specific NCBN park and protocol
+
+The function get_wl_data() downloads the data from Aquarius and formats it into a single data frame.
+
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(NCBNAqua)
+
+# Download water level data from the SET sites at ASIS
+asis_set_wl <- get_wl_data(park_code = "ASIS", protocol = "SET")
+
+head(asis_set_wl)
 ```
 
 ```{r}
-## View all locations with water data in a specific I&M Network
-#Print_Locations(Network = "Northeast Coastal and Barrier Network") 
+# Download seagrass water data (all parameters) from CACO
+caco_seagrass_wl <- get_wl_data(park_code = "CACO", protocol = "ENE_Seagrass")
+
+head(caco_seagrass_wl)
 ```
 
 ```{r}
-# View sites associated with the NCBN SETs
-# Print_Locations(Network = "Northeast Coastal and Barrier Network") %>%
-#   filter(stringr::str_detect(Identifier, "WaterLevel$")) # select sites with the suffix "WaterLevel"
+# Download ENE water quality data (all parameters) from GEWA and filter to just Chlorophyll 
+gewa_wq_wl <- get_wl_data(park_code = "GEWA", protocol = "ENE_WQ") %>%
+  filter(Label %in% c("Chl", "Chlorophyll µg/L"))
+
+head(gewa_wq_wl)
 ```
+
+## Working with Water Level data
+
+The remaining functions in the package are meant to be used only with water level data referenced to NAVD88 from the SET sites.
 
 ```{r}
-#enter the location of interest to get a list of datasets:
-# Print_datasets(Location = "ASIS_M5_WaterLevel")
+tidal_datums(wl_data = asis_set_wl)
 ```
-
-```{r}
-#you can also print available metadata for a given location based on it's identifier:
-# Print_metadata(Location = "ASIS_M5_WaterLevel")
-```
-
-```{r}
-# Pull the raw dataset from Aquarius
-# raw_record <- Get_timeseries2(record = "Depth.meters NAVD88@ASIS_M5_WaterLevel") 
-
-# head(raw_record$Points)
-```
-```{r}
-#this function will "clean it up"
-# temp_data <- TS_simplify(data = raw_record)
-
-# head(temp_data)
-```
- 
- 
