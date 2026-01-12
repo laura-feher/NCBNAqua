@@ -7,7 +7,7 @@
 plot_water_level_with_datums(
   wl_data,
   site = NA,
-  x_right_expand = 0.15,
+  x_right_expand = 0.25,
   include_extremes = FALSE
 )
 }

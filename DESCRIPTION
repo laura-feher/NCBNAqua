@@ -1,11 +1,11 @@
 Package: NCBNAqua
-Title: Retrieve Water Level Data and Calculate Tidal Datums
+Title: Retrieve and work with NPS Aquarius Water Data
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+    person("Laura", "Feher", , "lfeher at nps.gov", role = c("aut", "cre"))
+    person("Kaitlyn", "Button", , "kbutton at nps.gov", role = c("aut"))
+Description: NCBNAqua provides functions for downloading and working with water data for the NCBN protocols from the NPS Aquarius database.
+License: use_gpl3_license()
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
