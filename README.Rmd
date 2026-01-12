@@ -26,7 +26,7 @@ You can install the development version of NCBNAqua from [GitHub](https://github
 pak::pak("laura-feher/NCBNAqua")
 ```
 
-## Set & Store API credentials
+## Set & store API credentials
 
 The first time you use the package, you'll need to set and store credentials for the Aquarius API using the [keyring](https://keyring.r-lib.org/) package. Running the function keyring::key_set() will open a dialog box that will prompt you for a password. Note that this only needs to be done once. Contact laura_feher at nps.gov for more info.
 
@@ -36,9 +36,15 @@ library(keyring)
 # keyring::key_set("aquarius", "aqreadonly")
 ```
 
-## Establish a Connection to Aquarius
+## Establish a connection to Aquarius
 
-```{r}
+Use the function connectToAquarius from the fetchaquarius package to establish a connection to the API. Note that this only needs to be run once per session.
+
+```{r message=FALSE}
+library(tidyverse)
+library(NCBNAqua)
+library(fetchaquarius)
+
 # establish connection to Aquarius
 fetchaquarius::connectToAquarius("aqreadonly")
 ```
@@ -48,9 +54,6 @@ fetchaquarius::connectToAquarius("aqreadonly")
 The function get_wl_data() downloads the data from Aquarius and formats it into a single data frame.
 
 ```{r message=FALSE, warning=FALSE}
-library(tidyverse)
-library(NCBNAqua)
-
 # Download water level data from the SET sites at ASIS
 asis_set_wl <- get_wl_data(park_code = "ASIS", protocol = "SET")
 
@@ -64,18 +67,94 @@ caco_seagrass_wl <- get_wl_data(park_code = "CACO", protocol = "ENE_Seagrass")
 head(caco_seagrass_wl)
 ```
 
-```{r}
-# Download ENE water quality data (all parameters) from GEWA and filter to just Chlorophyll 
-gewa_wq_wl <- get_wl_data(park_code = "GEWA", protocol = "ENE_WQ") %>%
-  filter(Label %in% c("Chl", "Chlorophyll µg/L"))
+## Filter water data to a specific site or parameter
 
-head(gewa_wq_wl)
+The function get_sites() prints a list of all sites in the previously downloaded CACO Seagrass water data. You can then use the site names to filter the data to a specific site.
+
+```{r message=FALSE, warning=FALSE}
+# Print a list of the sites in the CACO Seagrass water data
+get_sites(caco_seagrass_wl) %>%
+  head()
+
+# Filter to just Duck Harbor
+caco_dh_seagrass_wl <- caco_seagrass_wl %>%
+  filter(Name == "Duck Harbor")
+
+head(caco_dh_seagrass_wl)
 ```
 
-## Working with Water Level data
-
-The remaining functions in the package are meant to be used only with water level data referenced to NAVD88 from the SET sites.
+The function get_parameters prints a list of all water parameters in the previously downloaded CACO Seagrass water data. You can then use the Identifier, Unit, or Label to filter the data to a specific parameter.
 
 ```{r}
+# Print a list of the parameters in the CACO Seagrass water data
+get_parameters(caco_seagrass_wl) %>%
+  head()
+
+# Filter to just water temp
+caco_watertemp_seagrass_wl <- caco_seagrass_wl %>%
+  filter(Unit == "degC")
+
+head(caco_watertemp_seagrass_wl)
+```
+
+## Save water data to Excel
+
+You can use the function write.xlsx() from the [openxlsx](https://ycphs.github.io/openxlsx/) package to save the downloaded data to an excel file.
+
+```{r warning=FALSE}
+library(openxlsx)
+
+# First, filter the ASIS water level data to Valentines (M8)
+asis_m8_set_wl <- asis_set_wl %>%
+  filter(Name == "Assateague Island NS - M8 - Valentines Marsh")
+```
+
+```{r echo=TRUE, eval=FALSE}
+# Then save the water level data from Valentines to excel and put it in the "data" folder
+write.xlsx(asis_m8_set_wl, file = "data/asis_m8_set_wl.xlsx")
+```
+
+## Working with NAVD88 water level data
+
+NOTE: The remaining functions in the package are meant to be used only with water level data referenced to NAVD88 from the SET sites.
+
+```{r}
+# Get tidal datums for the sites at ASIS
 tidal_datums(wl_data = asis_set_wl)
+```
+
+## Plot water level with tidal datums
+
+The function plot_water_level_with_datums() can be used to plot the NAVD88 water level with horizontal lines showing the calculated tidal datums. Note that the data must either be filtered to a single site before using the function or you must use the 'site' parameter within the function to filter the data to a single site.
+
+```{r out.width="50%"}
+# Use dplyr::filter to select a single site and then plot the data
+asis_set_wl %>%
+  filter(Name == "Assateague Island NS - M8 - Valentines Marsh") %>%
+  plot_water_level_with_datums(wl_data = .)
+
+# OR specify a single site using the site parameter within the plotting function
+plot_water_level_with_datums(wl_data = asis_set_wl, site = "Assateague Island NS - M8 - Valentines Marsh")
+
+# OR save data from a single site to a separate df (see above section "Save water data to Excel") and then plot the data
+plot_water_level_with_datums(wl_data = asis_m8_set_wl)
+```
+
+To include MHHW and MLLW in the plot, use include_extremes = TRUE
+
+```{r out.width="50%"}
+plot_water_level_with_datums(wl_data = asis_m8_set_wl, include_extremes = TRUE)
+```
+
+## Save tidal datums and plot to Excel
+
+The function save_water_level_with_datums() will save the water level data, tidal datums, and plot to an excel file. Note that the water level data must be filtered to a single site.
+
+```{r echo=TRUE, eval=FALSE, results='hide'}
+save_water_level_with_datums(
+  wl_data = asis_m8_set_wl, 
+  folder = "data", 
+  file_name = "ASIS_M8_Plotting", 
+  overwrite = TRUE
+  )
 ```
