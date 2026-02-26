@@ -35,8 +35,10 @@ time_flooded <- function(flood_depths_df) {
   
   if(unique(flood_depths_df$park) %in% c("ACAD", "ASIS", "CACO", "COLO", "FIIS", "GATE", "GWMP", "NACE")) {
     interval_mins <- 15 # Data from NCBN & NCRN sites is in 15-minute intervals (interval_mins = 15)
-  } else if (unique(flood_depths_df$park %in% c("BISC", "SARI", "VIIS"))) {
+  } else if (unique(flood_depths_df$park) %in% c("BISC", "SARI", "VIIS")) {
     interval_mins <- 60 # Data from SFCN sites is in 1-hour intervals (interval_mins = 60).
+  } else if (unique(flood_depths_df$park) == "BOHA") {
+    interval_mins <- 6 # Data from NOAA Boston Harbor tide gauge is in 6-minute intervals
   }
   
   flood_depths_df %>%

@@ -1,9 +1,9 @@
 Package: NCBNAqua
 Title: Retrieve and work with NPS Aquarius Water Data
 Version: 0.0.0.9000
-Authors@R: 
-    person("Laura", "Feher", , "lfeher at nps.gov", role = c("aut", "cre"))
-    person("Kaitlyn", "Button", , "kbutton at nps.gov", role = c("aut"))
+Authors@R: c(person("Laura", "Feher", email = "lfeher@nps.gov", role = c("aut", "cre")),
+    person("Kaitlyn", "Button", email = "kbutton@nps.gov", role = c("aut")))
+Maintainer: Laura Feher <laura_feher@nps.gov>    
 Description: NCBNAqua provides functions for downloading and working with water data for the NCBN protocols from the NPS Aquarius database.
 License: use_gpl3_license()
 Encoding: UTF-8
