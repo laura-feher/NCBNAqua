@@ -10,9 +10,9 @@ get_wl_data(park_code, protocol = "SET")
 \arguments{
 \item{park_code}{string (required); The 4 character park code - must be
 capitalized (e.g., "ASIS"). For SET sites, options include ASIS, ACAD,
-BISC, CACO, COLO, FIIS, GATE, GWMP, NACE, SARI, or VIIS. For ENE Seagrass,
-options include ASIS, CACO, or FIIS. For ENE WQ, options include ASIS,
-CACO, COLO, FIIS, GATE, or GWMP.}
+BISC, CACO, CANA, CAHA, CALO, COLO, CUIS, FIIS, FOMA, FOPU, GATE, GWMP,
+NACE, SARI, TIMU, or VIIS. For ENE Seagrass, options include ASIS, CACO, or
+FIIS. For ENE WQ, options include ASIS, CACO, COLO, FIIS, GATE, or GWMP.}
 
 \item{protocol}{string (required); The protocol type that you want to return
 data for. Either "SET", "ENE_Seagrass", or "ENE_WQ". Default is "SET".}

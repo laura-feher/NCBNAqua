@@ -7,10 +7,10 @@
 #'
 #' @param park_code string (required); The 4 character park code - must be
 #'   capitalized (e.g., "ASIS"). For SET sites, options include ASIS, ACAD,
-#'   BISC, CACO, COLO, FIIS, GATE, GWMP, NACE, SARI, or VIIS. For ENE Seagrass,
-#'   options include ASIS, CACO, or FIIS. For ENE WQ, options include ASIS,
-#'   CACO, COLO, FIIS, GATE, or GWMP.
-#' 
+#'   BISC, CACO, CANA, CAHA, CALO, COLO, CUIS, FIIS, FOMA, FOPU, GATE, GWMP,
+#'   NACE, SARI, TIMU, or VIIS. For ENE Seagrass, options include ASIS, CACO, or
+#'   FIIS. For ENE WQ, options include ASIS, CACO, COLO, FIIS, GATE, or GWMP.
+#'
 #' @param protocol string (required); The protocol type that you want to return
 #'   data for. Either "SET", "ENE_Seagrass", or "ENE_WQ". Default is "SET".
 #'
@@ -65,6 +65,8 @@ get_wl_data <- function(park_code, protocol = "SET") {
       folder <- "National Park Service.South Florida Caribbean Network.SARI"
     } else if (park_code == "VIIS") {
       folder <- "National Park Service.South Florida Caribbean Network.VIIS"
+    } else if (park_code %in% c("CANA", "CAHA", "CALO", "CUIS", "FOMA", "FOPU", "TIMU")) {
+      folder <- "National Park Service.Southeast Coast Network.Fixed Station WQ"
     } else {
       stop(paste0("No water level data available for SET at ", park_code))
     }
@@ -115,6 +117,27 @@ get_wl_data <- function(park_code, protocol = "SET") {
     } else if (park_code == "NACE") {
       location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
         filter(Identifier == "NACE_KENI_WaterLevel") 
+    } else if (park_code == "CANA") {
+      location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
+        filter(Identifier == "CANAvctr01")
+    } else if (park_code == "CAHA") {
+      location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
+        filter(Identifier == "CAHAocbr01")
+    } else if (park_code == "CALO") {
+      location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
+        filter(Identifier %in% c("CALOmidm02", "CALOshak01"))
+    } else if (park_code == "CUIS") {
+      location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
+        filter(Identifier %in% c("CUISseac03", "CUISold02", "CUISplum01"))
+    } else if (park_code == "FOMA") {
+      location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
+        filter(Identifier == "FOMAvctr01")
+    } else if (park_code == "FOPU") {
+      location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
+        filter(Identifier == "FOPUlazz01")
+    } else if (park_code == "TIMU") {
+      location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
+        filter(Identifier %in% c("TIMUclap01", "TIMUclap02", "TIMUking01", "TIMUloft01", "TIMUnass01"))
     } else {
       location_ids <- fetchaquarius::getLocationInfo(folder = folder) 
     }
@@ -175,7 +198,11 @@ get_wl_data <- function(park_code, protocol = "SET") {
       mutate(parameters = map(Identifier, ~fetchaquarius::getTimeSeriesInfo(.x))) %>%
       select(-c(Identifier, UniqueId, UtcOffset, LastModified, Publish, Tags)) %>%
       unnest(cols = c(parameters)) %>%
-      filter(str_detect(Parameter, "Depth") | str_detect(Parameter, "Water Level")) %>% # filter to the water level time series
+        {if (park_code %in% c("CANA", "CAHA", "CALO", "CUIS", "FOMA", "FOPU", "TIMU"))
+          filter(., str_detect(Parameter, "Depth") & str_detect(Label, "Instantaneous"))
+          else
+            filter(str_detect(Parameter, "Depth") | str_detect(Parameter, "Water Level"))  # filter to the water level time series
+        } %>%
       filter(str_detect(Identifier, park_code)) %>%
       mutate(wl_timeseries = map(Identifier, ~fetchaquarius::getTimeSeries(.x))) %>%
       mutate(park = park_code) %>%
