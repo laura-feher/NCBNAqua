@@ -128,7 +128,7 @@ get_wl_data <- function(park_code, protocol = "SET") {
         filter(Identifier %in% c("CALOmidm02", "CALOshak01"))
     } else if (park_code == "CUIS") {
       location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
-        filter(Identifier %in% c("CUISseac03", "CUISold02", "CUISplum01"))
+        filter(Identifier == "CUISseac03")
     } else if (park_code == "FOMA") {
       location_ids <- fetchaquarius::getLocationInfo(folder = folder) %>%
         filter(Identifier == "FOMAvctr01")
@@ -201,9 +201,9 @@ get_wl_data <- function(park_code, protocol = "SET") {
         {if (park_code %in% c("CANA", "CAHA", "CALO", "CUIS", "FOMA", "FOPU", "TIMU"))
           filter(., str_detect(Parameter, "Depth") & str_detect(Label, "Instantaneous"))
           else
-            filter(str_detect(Parameter, "Depth") | str_detect(Parameter, "Water Level"))  # filter to the water level time series
+            filter(., str_detect(Parameter, "Depth") | str_detect(Parameter, "Water Level"))  # filter to the water level time series
         } %>%
-      filter(str_detect(Identifier, park_code)) %>%
+      filter(., str_detect(Identifier, park_code)) %>%
       mutate(wl_timeseries = map(Identifier, ~fetchaquarius::getTimeSeries(.x))) %>%
       mutate(park = park_code) %>%
       select(Name, Identifier, LocationIdentifier, park, Unit, Label, wl_timeseries) %>%
