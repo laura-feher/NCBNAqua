@@ -4,7 +4,16 @@
 \alias{save_water_level_with_datums}
 \title{Save NAVD88 water level data, tidal datums, and plot to an excel file}
 \usage{
-save_water_level_with_datums(wl_data, folder, file_name, overwrite = FALSE)
+save_water_level_with_datums(
+  wl_data,
+  folder,
+  file_name,
+  overwrite = FALSE,
+  site = NA,
+  x_right_expand = 0.25,
+  include_MLW = TRUE,
+  include_extremes = FALSE
+)
 }
 \arguments{
 \item{wl_data}{(required); A data frame containing water level data obtained
@@ -21,6 +30,18 @@ you want to use.}
 
 \item{overwrite}{(optional); Do you want to overwrite an existing file of the
 same name? Defaults to FALSE.}
+
+\item{site}{(optional): A string specifying the name of a single site to
+plot.}
+
+\item{x_right_expand}{(optional): Value used to expand the x-axis to the
+right.}
+
+\item{include_MLW}{(optional): TRUE (default) will plot the MLW line. USE
+include_MLW = FALSE to turn it off.}
+
+\item{include_extremes}{(optional): TRUE will plot MHHW and MLLW in addition
+to MHW and MLW. Defaults to FALSE.}
 }
 \value{
 Invisibly saves an excel workbook to the specified folder/file_name.
@@ -30,5 +51,7 @@ Save NAVD88 water level data, tidal datums, and plot to an excel file
 }
 \examples{
 save_water_level_with_datums(wl_data = asis_m8_set_wl, folder = "data", file_name = "ASIS_M8_Plotting", overwrite = TRUE)
+
+save_water_level_with_datums(wl_data = asis_set_wl, folder = "data", file_name = "ASIS_M8_Plotting", overwrite = TRUE, x_right_expand = 0.5, include_MLW = FALSE, include_extremes = TRUE)
   
 }
