@@ -42,6 +42,7 @@ once per session.
 
 ``` r
 library(tidyverse)
+#> Warning: package 'readr' was built under R version 4.5.3
 library(NCBNAqua)
 library(fetchaquarius)
 
@@ -238,7 +239,7 @@ asis_set_wl %>%
   plot_water_level_with_datums(wl_data = .)
 ```
 
-<img src="man/figures/README-unnamed-chunk-11-1.png" width="50%" />
+<img src="man/figures/README-unnamed-chunk-11-1.png" alt="" width="50%" />
 
 ``` r
 
@@ -246,7 +247,7 @@ asis_set_wl %>%
 plot_water_level_with_datums(wl_data = asis_set_wl, site = "Assateague Island NS - M8 - Valentines Marsh")
 ```
 
-<img src="man/figures/README-unnamed-chunk-11-2.png" width="50%" />
+<img src="man/figures/README-unnamed-chunk-11-2.png" alt="" width="50%" />
 
 ``` r
 
@@ -254,7 +255,15 @@ plot_water_level_with_datums(wl_data = asis_set_wl, site = "Assateague Island NS
 plot_water_level_with_datums(wl_data = asis_m8_set_wl)
 ```
 
-<img src="man/figures/README-unnamed-chunk-11-3.png" width="50%" />
+<img src="man/figures/README-unnamed-chunk-11-3.png" alt="" width="50%" />
+
+To turn off the MLW line, use include_MLW = FALSE
+
+``` r
+plot_water_level_with_datums(wl_data = asis_m8_set_wl, include_MLW = FALSE)
+```
+
+<img src="man/figures/README-unnamed-chunk-12-1.png" alt="" width="50%" />
 
 To include MHHW and MLLW in the plot, use include_extremes = TRUE
 
@@ -262,19 +271,44 @@ To include MHHW and MLLW in the plot, use include_extremes = TRUE
 plot_water_level_with_datums(wl_data = asis_m8_set_wl, include_extremes = TRUE)
 ```
 
-<img src="man/figures/README-unnamed-chunk-12-1.png" width="50%" />
+<img src="man/figures/README-unnamed-chunk-13-1.png" alt="" width="50%" />
 
 ## Save tidal datums and plot to Excel
 
 The function save_water_level_with_datums() will save the water level
-data, tidal datums, and plot to an excel file. Note that the water level
-data must be filtered to a single site.
+data, tidal datums, and plot to an excel file. Note that the data must
+either be filtered to a single site before using the function or you
+must use the ‘site’ parameter within the function to filter the data to
+a single site.
 
 ``` r
-save_water_level_with_datums(
-  wl_data = asis_m8_set_wl, 
-  folder = "data", 
-  file_name = "ASIS_M8_Plotting", 
-  overwrite = TRUE
+# Use dplyr::filter to select a single site and then save the data and plot to excel
+asis_set_wl %>%
+  filter(Name == "Assateague Island NS - M8 - Valentines Marsh") %>%
+  save_water_level_with_datums(
+    wl_data = ., 
+    folder = "data", 
+    file_name = "ASIS_M8_Plotting", 
+    overwrite = TRUE
   )
+
+# OR specify a single site using the site parameter
+save_water_level_with_datums(
+  wl_data = asis_set_wl,
+  folder = "data", 
+  file_name = "ASIS_M8_Plotting",
+  overwrite = TRUE,
+  site = "Assateague Island NS - M8 - Valentines Marsh"
+)
+
+# OR save data from a single site to a separate df (see above section "Save water data to Excel") and then save the data and plot
+save_water_level_with_datums(
+  wl_data = asis_m8_set_wl,
+  folder = "data",
+  file_name = "ASIS_M8_Plotting",
+  overwrite = TRUE,
+  x_right_expand = 0.5, # change x-axis expansion of the plot
+  include_MLW = FALSE, # turn off plotting of MLW line
+  include_extremes = TRUE # include plotting of MHHW and MLLW lines
+)
 ```
