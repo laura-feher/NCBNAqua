@@ -145,7 +145,7 @@ get_wl_data <- function(park_code, protocol = "SET") {
     if (park_code == "ASIS") {
       location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
         bind_rows() %>%
-        filter(Identifier %in% c("ASIS_Seagrass_Grays_Cove", "ASIS_Seagrass_Wildcat", "ASIS_Seagrass")) %>%
+        filter(Identifier %in% c("ASIS_Seagrass_Grays_Cove", "ASIS_Seagrass_Wildcat", "ASIS_Seagrass_Tingles")) %>%
         distinct()
     } else if (park_code == "FIIS") {
       location_ids <- map(folder, ~fetchaquarius::getLocationInfo(folder = .x)) %>%
