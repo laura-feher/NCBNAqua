@@ -10,6 +10,8 @@
 #'   plot.
 #' @param x_right_expand (optional): Value used to expand the x-axis to the
 #'   right.
+#' @param include_MLW (optional): TRUE (default) will plot the MLW line. USE
+#'   include_MLW = FALSE to turn it off.
 #' @param include_extremes (optional): TRUE will plot MHHW and MLLW in addition
 #'   to MHW and MLW. Defaults to FALSE.
 #'
@@ -20,7 +22,7 @@
 #' @examples
 #' plot_water_level_with_datums(wl_data = asis_m8_set_wl)
 #' 
-plot_water_level_with_datums <- function(wl_data, site = NA, x_right_expand = 0.25, include_extremes = FALSE) {
+plot_water_level_with_datums <- function(wl_data, site = NA, x_right_expand = 0.25, include_MLW = TRUE, include_extremes = FALSE) {
   
   if (is.na(site)) {
     df <- wl_data
@@ -55,13 +57,14 @@ plot_water_level_with_datums <- function(wl_data, site = NA, x_right_expand = 0.
       linewidth = 0.8
     ) +
     
-    # MLW horizontal line across the plot
+    # Include MLW horizontal line across the plot if include_MLW = TRUE (default)
+    {if(include_MLW)
     ggplot2::geom_line(
       data = data.frame(datetime = x_range, water_level = rep(MLW, 2)),
       ggplot2::aes(x = datetime, y = water_level, color = "MHW", linetype = "MHW"),
       linewidth = 0.8
-    ) +
-    
+    )
+    } +
     # MHW label (shifted right into the expanded margin)
     ggplot2::annotate(
       "text",
@@ -72,14 +75,15 @@ plot_water_level_with_datums <- function(wl_data, site = NA, x_right_expand = 0.
     ) +
     
     # MLW label (shifted right into the expanded margin)
+    {if(include_MLW)
     ggplot2::annotate(
       "text",
       x = label_x, y = MLW,
       label = paste0("MLW = ", round(MLW, 3), " m"),
       hjust = 0, vjust = 0.5,
       color = "red", size = 4
-    ) +
-    
+    )
+    } +
     # Include MHHW and MLLW if include_extremes = TRUE
     {if(include_extremes)
       ggplot2::geom_line(

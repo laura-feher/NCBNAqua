@@ -8,6 +8,7 @@ plot_water_level_with_datums(
   wl_data,
   site = NA,
   x_right_expand = 0.25,
+  include_MLW = TRUE,
   include_extremes = FALSE
 )
 }
@@ -21,6 +22,9 @@ plot.}
 
 \item{x_right_expand}{(optional): Value used to expand the x-axis to the
 right.}
+
+\item{include_MLW}{(optional): TRUE (default) will plot the MLW line. USE
+include_MLW = FALSE to turn it off.}
 
 \item{include_extremes}{(optional): TRUE will plot MHHW and MLLW in addition
 to MHW and MLW. Defaults to FALSE.}
